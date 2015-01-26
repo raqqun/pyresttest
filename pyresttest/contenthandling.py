@@ -1,13 +1,15 @@
 import string
 import os
 from parsing import *
+from lru_cache import LRUCache
 
 """
-Encapsulates contend handling logic, for pulling file content into tests
+Encapsulates content handling logic, for pulling file content into tests
 """
 
 class ContentHandler:
     """ Handles content that may be (lazily) read from filesystem and/or templated to various degrees
+    For file read, incorporates a shared LRUCache for file reads to try to reduce disk hits
     Also creates pixie dust and unicorn farts on demand
     This is pulled out because logic gets complex rather fast
 
@@ -24,6 +26,11 @@ class ContentHandler:
     is_file = False
     is_template_path = False
     is_template_content = False
+    cache = LRUCache()
+
+    def __init__(self, cache=None):
+        if isinstance(cache, LRUCache):
+            self.cache = cache
 
     def is_dynamic(self):
         """ Is templating used? """
@@ -37,9 +44,13 @@ class ContentHandler:
             if self.is_template_path and context:
                 path = string.Template(path).safe_substitute(context.get_values())
             data = None
-            with open(path, 'r') as f:
-                data = f.read()
-
+            if isinstance(self.cache, LRUCache):
+                data = self.cache.get(path)
+            if data is None:
+                with open(path, 'r') as f:
+                    data = f.read()
+            if isinstance(self.cache, LRUCache):
+                self.cache.put(path, data)
             if self.is_template_content and context:
                 return string.Template(data).safe_substitute(context.get_values())
             else:
