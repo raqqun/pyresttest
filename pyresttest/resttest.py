@@ -444,6 +444,8 @@ def run_benchmark(benchmark, test_config=TestConfig(), context=None):
     metricvalues = [METRICS[name] for name in metricnames]
     # Initialize arrays to store results for each metric
     results = [list() for x in xrange(0, len(metricnames))]
+    results.append(list())
+
     curl = pycurl.Curl()
 
     # Benchmark warm-up to allow for caching, JIT compiling, on client
@@ -477,6 +479,8 @@ def run_benchmark(benchmark, test_config=TestConfig(), context=None):
             curl.close()
             curl = pycurl.Curl()
             continue  # Skip metrics collection
+        response_code = curl.getinfo(pycurl.RESPONSE_CODE)
+        results[4].append(response_code)
 
         # Get all metrics values for this run, and store to metric lists
         for i in xrange(0, len(metricnames)):
@@ -488,7 +492,11 @@ def run_benchmark(benchmark, test_config=TestConfig(), context=None):
     temp_results = dict()
     for i in xrange(0, len(metricnames)):
         temp_results[metricnames[i]] = results[i]
+
+    temp_results['status_code'] = results[4]
+
     output.results = temp_results
+
     return analyze_benchmark_results(output, benchmark)
 
 
@@ -509,7 +517,7 @@ def analyze_benchmark_results(benchmark_result, benchmark):
     for metric in benchmark.raw_metrics:
         temp[metric] = raw_results[metric]
     output.results = temp
-
+    output.results['status_code'] = benchmark_result.results['status_code']
     # Compute aggregates for each metric, and add tuples to aggregate results
     aggregate_results = list()
     for metricname, aggregate_list in benchmark.aggregated_metrics.items():

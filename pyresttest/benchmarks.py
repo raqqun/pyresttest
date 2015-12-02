@@ -71,7 +71,8 @@ METRICS = {
 
     # Connection counts
     'redirect_count': pycurl.REDIRECT_COUNT,
-    'num_connects': pycurl.NUM_CONNECTS
+    'num_connects': pycurl.NUM_CONNECTS,
+    'content_length_download': pycurl.CONTENT_LENGTH_DOWNLOAD
 }
 
 # Map statistical aggregate to the function to use to perform the
@@ -132,7 +133,7 @@ class Benchmark(Test):
     benchmark_runs = 100  # Times call is executed to generate benchmark results
     output_format = u'csv'
     output_file = None
-
+    expected_status = 200
     # Metrics to gather, both raw and aggregated
     metrics = set()
 
@@ -219,7 +220,9 @@ def parse_benchmark(base_url, node):
 
     # Complex parsing because of list/dictionary/singleton legal cases
     for key, value in node.items():
-        if key == u'warmup_runs':
+        if key == u'expected_status':
+            benchmark.expected_status = int(value)
+        elif key == u'warmup_runs':
             benchmark.warmup_runs = int(value)
         elif key == u'benchmark_runs':
             benchmark.benchmark_runs = int(value)
